@@ -5,13 +5,15 @@
 // Tested and works great with the Adafruit Ultimate GPS module
 // using MTK33x9 chipset
 //    ------> http://www.adafruit.com/products/746
-// Pick one up today at the Adafruit electronics shop 
+// Pick one up today at the Adafruit electronics shop
 // and help support open source hardware & software! -ada
 
 //This code is intended for use with Arduino Leonardo and other ATmega32U4-based Arduinos
 
 #include <Adafruit_GPS.h>
-#include <SoftwareSerial.h>
+#if ARDUINO >= 100
+ #include <SoftwareSerial.h>
+#endif
 
 // Connect the GPS Power pin to 5V
 // Connect the GPS Ground pin to ground
@@ -41,10 +43,10 @@ HardwareSerial mySerial = Serial1;
 boolean usingInterrupt = false;
 void useInterrupt(boolean); // Func prototype keeps Arduino 0023 happy
 
-void setup()  
-{    
+void setup()
+{
   while (!Serial) ;  //wait for serial port on Leonardo
-  
+
   // connect at 115200 so we can read the GPS fast enuf and
   // also spit it out
   Serial.begin(115200);
@@ -52,7 +54,7 @@ void setup()
 
   // 9600 NMEA is the default baud rate for MTK
   GPS.begin(9600);
-  
+
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_OFF);
 
   // the nice thing about this code is you can have a timer0 interrupt go off
@@ -72,27 +74,32 @@ void setup()
 void loop()                     // run over and over again
 {
   if (mySerial.available()) {
-    Serial.write(mySerial.read());  
+    Serial.write(mySerial.read());
   }
 }
 
 /******************************************************************/
 // Interrupt is called once a millisecond, looks for any new GPS data, and stores it
+#ifndef PARTICLE
 SIGNAL(TIMER0_COMPA_vect) {
+#else
+void handleSysTick(void* data) {
+#endif
   char c = GPS.read();
   // if you want to debug, this is a good time to do it!
   if (GPSECHO && c) {
-#ifdef UDR0
-    UDR0 = c;  
-    // writing direct to UDR0 is much much faster than Serial.print 
-    // but only one character can be written at a time. 
-#else
+  #ifdef UDR0
+    UDR0 = c;
+    // writing direct to UDR0 is much much faster than Serial.print
+    // but only one character can be written at a time.
+  #else
     Serial.write(c);
-#endif
+  #endif
   }
 }
 
 void useInterrupt(boolean v) {
+  #ifndef PARTICLE
   if (v) {
     // Timer0 is already used for millis() - we'll just interrupt somewhere
     // in the middle and call the "Compare A" function above
@@ -104,6 +111,10 @@ void useInterrupt(boolean v) {
     TIMSK0 &= ~_BV(OCIE0A);
     usingInterrupt = false;
   }
+  #else
+    static HAL_InterruptCallback callback;
+    static HAL_InterruptCallback previous;
+    callback.handler = handleSysTick;
+    HAL_Set_System_Interrupt_Handler(SysInterrupt_SysTick, &callback, &previous, nullptr);
+  #endif
 }
-
-

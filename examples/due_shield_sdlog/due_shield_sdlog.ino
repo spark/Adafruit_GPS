@@ -1,3 +1,4 @@
+#ifndef PARTICLE // requires library dependencies in examples, which is coming soon!
 
 #include <Adafruit_GPS.h>
 
@@ -20,7 +21,7 @@
 // Tested and works great with the Adafruit Ultimate GPS Shield
 // using MTK33x9 chipset
 //    ------> http://www.adafruit.com/products/
-// Pick one up today at the Adafruit electronics shop 
+// Pick one up today at the Adafruit electronics shop
 // and help support open source hardware & software! -ada
 
 #ifdef __AVR__
@@ -35,7 +36,7 @@ Adafruit_GPS GPS(&mySerial);
 // Set to 'true' if you want to debug and listen to the raw GPS sentences
 #define GPSECHO  true
 /* set to true to only log to SD when GPS has a fix, for debugging, keep it false */
-#define LOG_FIXONLY false  
+#define LOG_FIXONLY false
 
 // Set the pins used
 #define chipSelect 10
@@ -83,7 +84,7 @@ void setup() {
   // for Leonardos, if you want to debug SD issues, uncomment this line
   // to see serial output
   //while (!Serial);
-  
+
   // connect at 115200 so we can read the GPS fast enough and echo without dropping chars
   // also spit it out
   Serial.begin(115200);
@@ -93,7 +94,7 @@ void setup() {
   // make sure that the default chip select pin is set to
   // output, even if you don't use it:
   pinMode(10, OUTPUT);
-  
+
   // see if the card is present and can be initialized:
   if (!SD.begin(chipSelect, 11, 12, 13)) {
   //if (!SD.begin(chipSelect)) {      // if you're using an UNO, you can use this line instead
@@ -117,7 +118,7 @@ void setup() {
     error(3);
   }
   Serial.print("Writing to "); Serial.println(filename);
-  
+
   // connect to the GPS at the desired rate
   GPS.begin(9600);
 
@@ -132,7 +133,7 @@ void setup() {
 
   // Turn off updates on antenna status, if the firmware permits it
   GPS.sendCommand(PGCMD_NOANTENNA);
-  
+
   Serial.println("Ready!");
 }
 
@@ -144,14 +145,14 @@ void loop() {
   // if a sentence is received, we can check the checksum, parse it...
   if (GPS.newNMEAreceived()) {
     // a tricky thing here is if we print the NMEA sentence, or data
-    // we end up not listening and catching other sentences! 
+    // we end up not listening and catching other sentences!
     // so be very wary if using OUTPUT_ALLDATA and trying to print out data
     //Serial.println(GPS.lastNMEA());   // this also sets the newNMEAreceived() flag to false
-        
+
     if (!GPS.parse(GPS.lastNMEA()))   // this also sets the newNMEAreceived() flag to false
       return;  // we can fail to parse a sentence in which case we should just wait for another
-    
-    // Sentence parsed! 
+
+    // Sentence parsed!
     Serial.println("OK");
     if (LOG_FIXONLY && !GPS.fix) {
         Serial.print("No Fix");
@@ -160,7 +161,7 @@ void loop() {
 
     // Rad. lets log it!
     Serial.println("Log");
-    
+
     char *stringptr = GPS.lastNMEA();
     uint8_t stringsize = strlen(stringptr);
     if (stringsize != logfile.write((uint8_t *)stringptr, stringsize))    //write the string to the SD file
@@ -172,3 +173,4 @@ void loop() {
 
 
 /* End code */
+#endif

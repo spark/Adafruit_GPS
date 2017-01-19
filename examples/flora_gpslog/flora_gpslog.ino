@@ -1,5 +1,7 @@
 #include <Adafruit_GPS.h>
+#ifndef PARTICLE
 #include <SoftwareSerial.h>
+#endif
 Adafruit_GPS GPS(&Serial1);
 
 // Set GPSECHO to 'false' to turn off echoing the GPS data to the Serial console
@@ -10,8 +12,8 @@ Adafruit_GPS GPS(&Serial1);
 // off by default!
 boolean usingInterrupt = false;
 
-void setup()  
-{    
+void setup()
+{
   //while (!Serial);
   // connect at 115200 so we can read the GPS fast enuf and
   // also spit it out
@@ -20,7 +22,7 @@ void setup()
 
   // 9600 NMEA is the default baud rate for MTK - some use 4800
   GPS.begin(9600);
-  
+
   // You can adjust which sentences to have the module emit, below
   // Default is RMC + GGA
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
@@ -57,14 +59,20 @@ void loop()                     // run over and over again
 
 /******************************************************************/
 // Interrupt is called once a millisecond, looks for any new GPS data, and stores it
+#ifndef PARTICLE
 SIGNAL(TIMER0_COMPA_vect) {
+#else
+void handleSysTick(void* data) {
+#endif
+
   char c = GPS.read();
   // if you want to debug, this is a good time to do it!
   if (GPSECHO)
-    if (c) Serial.print(c);  
+    if (c) Serial.print(c);
 }
 
 void useInterrupt(boolean v) {
+  #ifndef PARTICLE
   if (v) {
     // Timer0 is already used for millis() - we'll just interrupt somewhere
     // in the middle and call the "Compare A" function above
@@ -76,6 +84,10 @@ void useInterrupt(boolean v) {
     TIMSK0 &= ~_BV(OCIE0A);
     usingInterrupt = false;
   }
+  #else
+    static HAL_InterruptCallback callback;
+    static HAL_InterruptCallback previous;
+    callback.handler = handleSysTick;
+    HAL_Set_System_Interrupt_Handler(SysInterrupt_SysTick, &callback, &previous, nullptr);
+  #endif
 }
-
-

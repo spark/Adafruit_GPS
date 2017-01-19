@@ -1,5 +1,7 @@
 #include <Adafruit_GPS.h>
+#ifndef PARTICLE
 #include <SoftwareSerial.h>
+#endif
 Adafruit_GPS GPS(&Serial1);
 
 // Set GPSECHO to 'false' to turn off echoing the GPS data to the Serial console
@@ -10,8 +12,8 @@ Adafruit_GPS GPS(&Serial1);
 // off by default!
 boolean usingInterrupt = false;
 
-void setup()  
-{ 
+void setup()
+{
   while (!Serial);
   // connect at 115200 so we can read the GPS fast enuf and
   // also spit it out
@@ -20,7 +22,7 @@ void setup()
 
   // 9600 NMEA is the default baud rate for MTK - some use 4800
   GPS.begin(9600);
-  
+
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_OFF);
 
   while (Serial1.available())
@@ -33,7 +35,7 @@ void setup()
 
 
 void loop()                     // run over and over again
-{  
+{
   if (Serial1.available()) {
     char c = Serial1.read();
       if (c) Serial.print(c);

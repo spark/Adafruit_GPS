@@ -89,20 +89,27 @@ All text above must be included in any redistribution
 // how long to wait when we're looking for a response
 #define MAXWAITSENTENCE 5
 
-#if ARDUINO >= 100
- #include "Arduino.h"
-#if defined (__AVR__) && !defined(__AVR_ATmega32U4__)
- #include "SoftwareSerial.h"
+#ifndef PARTICLE
+  #if ARDUINO >= 100
+   #include "Arduino.h"
+  #if defined (__AVR__) && !defined(__AVR_ATmega32U4__)
+   #include "SoftwareSerial.h"
+  #endif
+  #else
+   #include "WProgram.h"
+   #include "NewSoftSerial.h"
+  #endif
+#else // ifndef PARTICLE
+  #include "Particle.h"
+  #ifndef PARTICLE_ARDUINO_COMPATIBILITY
+    #include <math.h>
+    typedef USARTSerial HardwareSerial;
+  #endif
 #endif
-#else
- #include "WProgram.h"
- #include "NewSoftSerial.h"
-#endif
-
 
 class Adafruit_GPS {
  public:
-  void begin(uint32_t baud); 
+  void begin(uint32_t baud);
 
 #if defined(__AVR__) && defined(USE_SW_SERIAL)
   #if ARDUINO >= 100

@@ -7,7 +7,7 @@
 // Tested and works great with the Adafruit Ultimate GPS module
 // using MTK33x9 chipset
 //    ------> http://www.adafruit.com/products/746
-// Pick one up today at the Adafruit electronics shop 
+// Pick one up today at the Adafruit electronics shop
 // and help support open source hardware & software! -ada
 
 #include <Adafruit_GPS.h>
@@ -31,18 +31,22 @@
 
 // If using software serial, keep these lines enabled
 // (you can change the pin numbers to match your wiring):
+#ifndef PARTICLE
 #if ARDUINO >= 100
   SoftwareSerial mySerial(3, 2);
 #else
   NewSoftSerial mySerial(3, 2);
+#endif
+#else
+  USARTSerial& mySerial = Serial1;
 #endif
 Adafruit_GPS GPS(&mySerial);
 // If using hardware serial (e.g. Arduino Mega), comment
 // out the above six lines and enable this line instead:
 //Adafruit_GPS GPS(&Serial1);
 
-void setup()  
-{    
+void setup()
+{
   while (!Serial);  // Leonardo will wait till serial connects
 
   // connect at 115200 so we can read the GPS fast enuf and
@@ -52,7 +56,7 @@ void setup()
 
   // 9600 NMEA is the default baud rate for MTK - some use 4800
   GPS.begin(9600);
-  
+
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_OFF);
 
   // If using hardware serial (e.g. Arduino Mega), change this to Serial1, etc.
@@ -66,17 +70,16 @@ void setup()
 
 
 void loop()                     // run over and over again
-{  
+{
   // If using hardware serial (e.g. Arduino Mega), change this to Serial1, etc.
   if (mySerial.available()) {
     char c = mySerial.read();
     if (c) {
 #ifdef UDR0
-      UDR0 = c;  
+      UDR0 = c;
 #else
       Serial.print(c);
 #endif
     }
   }
 }
-

@@ -7,11 +7,18 @@
 // Tested and works great with the Adafruit Ultimate GPS module
 // using MTK33x9 chipset
 //    ------> http://www.adafruit.com/products/746
-// Pick one up today at the Adafruit electronics shop 
+// Pick one up today at the Adafruit electronics shop
 // and help support open source hardware & software! -ada
 
 #include <Adafruit_GPS.h>
-#include <SoftwareSerial.h>
+#if ARDUINO >= 100
+ #include <SoftwareSerial.h>
+#else
+  // Older Arduino IDE requires NewSoftSerial, download from:
+  // http://arduiniana.org/libraries/newsoftserial/
+// #include <NewSoftSerial.h>
+ // DO NOT install NewSoftSerial if using Arduino 1.0 or later!
+#endif
 
 // Connect the GPS Power pin to 5V
 // Connect the GPS Ground pin to ground
@@ -24,8 +31,15 @@
 
 // If using software serial, keep these lines enabled
 // (you can change the pin numbers to match your wiring):
-SoftwareSerial mySerial(3, 2);
-
+#ifndef PARTICLE
+#if ARDUINO >= 100
+  SoftwareSerial mySerial(3, 2);
+#else
+  NewSoftSerial mySerial(3, 2);
+#endif
+#else
+  USARTSerial& mySerial = Serial1;
+#endif
 Adafruit_GPS GPS(&mySerial);
 // If using hardware serial (e.g. Arduino Mega), comment
 // out the above six lines and enable this line instead:
@@ -34,15 +48,15 @@ Adafruit_GPS GPS(&mySerial);
 
 // Set GPSECHO to 'false' to turn off echoing the GPS data to the Serial console
 // Set to 'true' if you want to debug and listen to the raw GPS sentences
-#define GPSECHO  false
+#define GPSECHO  true
 
 // this keeps track of whether we're using the interrupt
 // off by default!
 boolean usingInterrupt = false;
 void useInterrupt(boolean); // Func prototype keeps Arduino 0023 happy
 
-void setup()  
-{    
+void setup()
+{
   while (!Serial);  // the Leonardo will 'wait' until the USB plug is connected
 
   // connect at 115200 so we can read the GPS fast enuf and
@@ -52,7 +66,7 @@ void setup()
 
   // 9600 NMEA is the default baud rate for MTK - some use 4800
   GPS.begin(9600);
-  
+
   // You can adjust which sentences to have the module emit, below
   // Default is RMC + GGA
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
@@ -63,70 +77,45 @@ void setup()
   // every 1 millisecond, and read data from the GPS for you. that makes the
   // loop code a heck of a lot easier!
   useInterrupt(true);
-
-  while (true) {
-    Serial.print("Starting logging....");
-    if (GPS.LOCUS_StartLogger()) {
-      Serial.println(" STARTED!");
-      break;
-    } else {
-      Serial.println(" no response :(");
-    }
-  }
+  delay(500);
+  Serial.print("\nSTARTING LOGGING....");
+  if (GPS.LOCUS_StartLogger())
+    Serial.println(" STARTED!");
+  else
+    Serial.println(" no response :(");
+  delay(1000);
 }
 
 
 
 void loop()                     // run over and over again
 {
-  delay(1000);
-   
-  if (GPS.LOCUS_ReadStatus()) {
-     Serial.print("\n\nLog #"); 
-     Serial.print(GPS.LOCUS_serial, DEC);
-    if (GPS.LOCUS_type == LOCUS_OVERLAP)
-      Serial.print(", Overlap, ");
-    else if (GPS.LOCUS_type == LOCUS_FULLSTOP)
-      Serial.print(", Full Stop, Logging");
-   
-    if (GPS.LOCUS_mode & 0x1) Serial.print(" AlwaysLocate");
-    if (GPS.LOCUS_mode & 0x2) Serial.print(" FixOnly");
-    if (GPS.LOCUS_mode & 0x4) Serial.print(" Normal");
-    if (GPS.LOCUS_mode & 0x8) Serial.print(" Interval");
-    if (GPS.LOCUS_mode & 0x10) Serial.print(" Distance");
-    if (GPS.LOCUS_mode & 0x20) Serial.print(" Speed");
-    
-    Serial.print(", Content "); Serial.print((int)GPS.LOCUS_config);
-    Serial.print(", Interval "); Serial.print((int)GPS.LOCUS_interval);
-    Serial.print(" sec, Distance "); Serial.print((int)GPS.LOCUS_distance);
-    Serial.print(" m, Speed "); Serial.print((int)GPS.LOCUS_speed);
-    Serial.print(" m/s, Status "); 
-    if (GPS.LOCUS_status) 
-      Serial.print("LOGGING, ");
-    else 
-      Serial.print("OFF, ");
-    Serial.print((int)GPS.LOCUS_records); Serial.print(" Records, ");
-    Serial.print((int)GPS.LOCUS_percent); Serial.print("% Used "); 
-
-  }
+   // do nothing! all reading and printing is done in the interrupt
 }
 
 /******************************************************************/
+
 // Interrupt is called once a millisecond, looks for any new GPS data, and stores it
+#ifndef PARTICLE
 SIGNAL(TIMER0_COMPA_vect) {
+#else
+void handleSysTick(void* data) {
+#endif
   char c = GPS.read();
   // if you want to debug, this is a good time to do it!
   if (GPSECHO && c) {
-#ifdef UDR0
-    UDR0 = c;  
-    // writing direct to UDR0 is much much faster than Serial.print 
-    // but only one character can be written at a time. 
-#endif
+  #ifdef UDR0
+    UDR0 = c;
+    // writing direct to UDR0 is much much faster than Serial.print
+    // but only one character can be written at a time.
+  #else
+    Serial.write(c);
+  #endif
   }
 }
 
-
 void useInterrupt(boolean v) {
+  #ifndef PARTICLE
   if (v) {
     // Timer0 is already used for millis() - we'll just interrupt somewhere
     // in the middle and call the "Compare A" function above
@@ -138,7 +127,10 @@ void useInterrupt(boolean v) {
     TIMSK0 &= ~_BV(OCIE0A);
     usingInterrupt = false;
   }
+  #else
+    static HAL_InterruptCallback callback;
+    static HAL_InterruptCallback previous;
+    callback.handler = handleSysTick;
+    HAL_Set_System_Interrupt_Handler(SysInterrupt_SysTick, &callback, &previous, nullptr);
+  #endif
 }
-
-
-
